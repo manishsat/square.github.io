@@ -5,7 +5,41 @@ on: [pull_request]
 jobs:
   build:
 
+    runs-on: ubuntu-latestname: Jekyll site CI
+
+on: [push,pull_request]
+
+jobs:
+  build:
+
     runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Setup Node.js for use with actions
+      uses: actions/setup-node@v1.1.0
+      with:
+        version: '>=10.18'
+    - name: Build the site in the jekyll/builder container
+      run: |
+        docker run \
+        -v ${{ github.workspace }}:/srv/jekyll -v ${{ github.workspace }}/_site:/srv/jekyll/_site \
+        jekyll/builder:latest /bin/bash -c "chmod 777 /srv/jekyll && jekyll build --future"
+        
+    - name: Run Accessibility Scan
+      run: |
+        npm install -g http-server
+        npm install accessibility-insights-scan
+        npx http-server ${{ github.workspace }}/_site -p 9123 &
+        npx ai-scan --url http://127.0.0.1:9123 --output ${{ github.workspace }}/_reports
+        
+    - name: Upload artifact
+      uses: actions/upload-artifact@v1.0.0
+      with:
+      # Artifact name
+        name: reports
+      # Directory containing files to upload
+        path: ${{ github.workspace }}/_reports
 
     steps:
     - uses: actions/checkout@v2
